@@ -1,24 +1,8 @@
 title: "R Data Science Fall 2018"
 type: inverse
 left:
-  - text: "Home"
-    href: index.html
   - text: "Project"
-    menu:
-      - text: "Proposal"
-        href: proposal.html
-      - text: "Processing(draft)"
-        href: draft_pt1.html
-      - text: "Analysis(draft)"
-        href: draft_pt2.html
-      - text: "Processing(final)"
-        href: final_pt1.html
-      - text: "Analysis(final)"
-        href: final_pt2.html
-  - text: "Data"
-    href: data.html
-  - text: "Resources"
-    href: resources.html
+    href: index.html
   - text: "Contact"
     href: contact.html
 right:

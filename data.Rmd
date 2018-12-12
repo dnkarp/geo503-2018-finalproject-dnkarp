@@ -1,53 +1,458 @@
 ---
-title: "Data Sources"
+title: "Data"
+output: html_document
 ---
 
-##### Opportunity Zones
- 
-* source: US Treasury
-* link: [Opportunity Zones Resources](https://www.cdfifund.gov/Pages/Opportunity-Zones.aspx)
-* timeframe: 2018
-* geography: census tract
-* indicators:
-  `Eligible census tracts`
-	`Approved designated census tracts`
-		
-#####  Community characteristics 
- 
-* source: American Community Survey Summary File (US Census)
-* link: [American Community Survey Summary File Data](https://www.census.gov/programs-surveys/acs/data/summary-file.html)
-* timeframe: annual 2010-2016 (5-year estimates)
-* geography: tract, zip code, country
-* indicators:
-	`demographics (age, sex, race, ethnicity, citizenship)`
-	`socioeconomic (education, income)`
-	`households (size, family type)`
-	`housing (% urban, housing type, year built, vacancy)`
-			
-#####  Real estate development
- 
-* source: Building Permits Survey (US Census)
-* link: [Building Permits Survey](https://www.census.gov/construction/bps/)
-* timeframe: annual 2000-2017; monthly 2000-2018
-* geography: country
-* indicators:
-	`number of new housing units authorized by building permits`
-			
-#####  Economic growth indicators
- 
-* source: County Business Patterns (US Census)
-* link: [County Business Patterns (CBP)](https://www.census.gov/programs-surveys/cbp.html)
-* timeframe: 2004-2018
-* geography: ZIP code, county
-* indicators:
-	`Business Patterns by Firm Employment Size & Class`
-			
-#####  Housing affordability
- 
-* source: Zillow
-* link: [Data - Zillow Research](https://www.zillow.com/research/data/)
-* timeframe: annual 2010-2016
-* geographies: zip code, country
-* indicators:
-	`Zillow sales price`
-	`Zillow rental price`
+## 0.Set-up
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## 1.Load libraries
+```{r load libs, message=F, warning=F, cache=T}
+
+#install.packages(c("tidyverse", "broom", "data.table", "purrr", "stringr", "readxl", "skimr", "units", "sf", "maps", "albersusa", "tidycensus", "tigris", "viridis", "gridExtra", "ggthemes", "cowplot", "tableone", "ggpubr"))
+
+# data wrangling libs
+library(tidyverse)
+library(broom)
+library(data.table)
+library(purrr)
+library(stringr)
+library(readxl)
+
+# data analysis
+library(skimr)
+library(units)
+library(tableone)
+
+# spatial libs
+library(sf)
+library(maps)
+library(albersusa)
+
+# census data libs + install api key
+library(tidycensus)
+library(tigris)
+options(tigris_use_cache = TRUE)
+
+# graphics/viz libs
+library(viridis)
+library(gridExtra)
+library(ggthemes)
+library(cowplot)
+library(ggpubr)
+
+
+```
+
+## 2.Load data
+### 2a.Load list of designated 'Opportunity Zones' from csv file
+```{r 2a download + load csv data, message=F, warning=F, cache=T}
+
+# A list of US census tracts that are designated "Opportunity Zones" is available as csv(source: CDFI Fund[https://www.cdfifund.gov/Pages/Opportunity-Zones.aspx]); csv, tract-level data, entire US, n = 74134
+
+# check is csv exists in data folder; if not, download and extract
+if(!file.exists("data/Opportunity Zones.csv")){
+# set URL of data source
+data.url <- "https://www.cdfifund.gov/Documents/Opportunity%20Zones2.zip"
+# set file path
+data.file <- 'data/ozone_data_from_cdfifund.zip'
+# download data to local directory
+download.file(data.url,data.file, method='curl')
+# unzip archived file
+unzip(data.file, exdir = "data", files = c("Opportunity Zones.csv"), overwrite = TRUE)
+}
+
+# load csv into data frame
+ozones.raw <- read_csv("data/Opportunity Zones.csv")
+
+```
+
+### 2b.Clean 'Opportunity Zones' (OZone) data frame
+```{r 2b load csv data, message=F, warning=F, cache=T}
+
+# get list of state postal codes (2-letter abbreviations), assign a state/territory flag
+# create a logical vector, true for 50 states +DC; false for territories (PR - Puerto Rico, VI - US Vir Islands, GU - Guam, MP - N.Mariana, UM - Minor Outlying, AS - Am Samoa)
+stab <- rbind(
+   cbind(state=c(unique(fips_codes$state)[1:51]),is.state=as.logical(T))
+  ,cbind(state=c(unique(fips_codes$state)[52:57]),is.state=as.logical(F))
+)
+
+# add state letter codes, and state/territory flag to ozone tract-level data;  
+ozones <- ozones.raw %>% 
+  mutate("state_code"=substr(ozones.raw$GEOID10,1,2)) %>% #extract 2-digit state FIPS codes from 11-digit tract FIPS
+  merge(data.frame(unique(fips_codes[,1:2])),by="state_code") %>% #merge (left join) state letter codes based on FIPS codes
+  merge(stab,by="state") #merge state/territory logic flag
+
+# set ozone datsframe as datatable
+setDT(ozones)
+
+# subset ozone data into 50+DC and territories
+ozones.51 <- ozones[as.logical(is.state),]
+saveRDS(ozones.51, "data/ozones_51.rds")
+ozones.terr <- ozones[!as.logical(is.state),]
+saveRDS(ozones.terr, "data/ozones_terr.rds")
+
+```
+
+### 2c.Load spatial features data from ACS
+```{r 2c download + load ACS spatial features data, cache=T}
+
+# TRACT-level data
+# check is RDS file exists in data folder; if not, download
+if(!file.exists("data/ustracts_sf.rds")){
+# download census tract boundaries (with population data, 2016) using tidycensus; get per state and bind
+ustracts_sf <- reduce( #can only request tracts per state, so it's necessary to loop through each state
+  purrr::map(stab[stab[,2]==T,1], function(x) { #loop through statelist, for 'states' only (exclude territories) 
+    get_acs(geography = "tract", variables = "B01003_001", #include population variable -- `get_acs` requires at least 1 var
+            state = x, geometry = TRUE) # include geometries
+  }), 
+  rbind #bind (stack rows) into complete data frame
+)
+# Save a sf object to a file
+saveRDS(ustracts_sf, "data/ustracts_sf.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("ustracts_sf")){
+ustracts_sf <- readRDS("data/ustracts_sf.rds")
+}
+
+# COUNTY-level data
+# check is RDS file exists in data folder; if not, download
+if(!file.exists("data/uscounties_sf.rds")){
+# get counties (filter out Puerto Rico)
+uscounties_sf <- get_acs(geography = "county", variables = "B01003_001", geometry = TRUE) %>% filter(substr(GEOID,1,2)!="72")
+# Save a sf object to a file
+saveRDS(uscounties_sf, "data/uscounties_sf.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("uscounties_sf")){
+uscounties_sf <- readRDS("data/uscounties_sf.rds")
+}
+
+# STATE-level data
+# check is RDS file exists in data folder; if not, download
+if(!file.exists("data/usstates_sf.rds")){
+# get states (filter Puerto Rico)
+usstates_sf <- get_acs(geography = "state", variables = "B01003_001", geometry = TRUE) %>% filter(GEOID!="72")
+# Save a sf object to a file
+saveRDS(usstates_sf, "data/usstates_sf.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("usstates_sf")){
+usstates_sf <- readRDS("data/usstates_sf.rds")
+}
+
+```
+
+### 2d.Clean spatial features data
+```{r 2d load ACS spatial features data from repo, cache=T}
+
+# reproject to albers & drop hawaii and alaska (for now; look into moving HI & AK for single layout)
+lower48 <- data.frame(state_code=unique(fips_codes$state_code)) %>% #get vector of FIPS codes 
+  filter(!(state_code %in% c("02","15","60", "66", "69", "72", "74", "78"))) %>% #exclude territories and HI/AK
+  mutate(state_code=as.character(state_code)) %>% #set numeric FIPS code as character
+  .[[1]] #convert dataframe to character vector 
+
+# define function to filter by lower48 & reproject to albers
+prj.alb.48 <- function(x){x %>% 
+    filter(substr(GEOID,1,2) %in% lower48) %>% 
+    st_transform(us_laea_proj)}
+
+# filter/repoject tracts
+ustracts_sf.48.albers <- prj.alb.48(ustracts_sf)
+
+#merge state abbrev (postal codes)
+tracts.sf <- ustracts_sf.48.albers %>% 
+  mutate(state_code=substr(GEOID,1,2)) %>% 
+  merge(data.frame(unique(fips_codes[,1:2])),by="state_code",all.x = T) %>% 
+  merge(stab,by="state")
+
+saveRDS(tracts.sf, "data/tracts_sf.rds")
+
+# filter/repoject counties
+uscounties_sf.48.albers <- prj.alb.48(uscounties_sf)
+
+#merge state abbrev (postal codes)
+counties.sf <- uscounties_sf.48.albers %>% 
+  mutate(state_code=substr(GEOID,1,2)) %>% 
+  merge(data.frame(unique(fips_codes[,1:2])),by="state_code",all.x = T) %>% 
+  merge(stab,by="state")
+
+saveRDS(counties.sf, "data/counties_sf.rds")
+
+# filter/repoject states
+usstates_sf.48.albers <- prj.alb.48(usstates_sf)
+
+#merge state abbrev (postal codes)
+states.sf <- usstates_sf.48.albers %>% 
+  mutate(state_code=substr(GEOID,1,2)) %>% 
+  merge(data.frame(unique(fips_codes[,1:2])),by="state_code",all.x = T) %>% 
+  merge(stab,by="state")
+
+saveRDS(states.sf, "data/states_sf.rds")
+
+```
+
+### 2e.Load New Market Tax Credit (NMTC) data
+```{r 2e download + load NMTC data from xlsx file, cache=T}
+
+# A list of NMTC investment projects, including date, location, project info; source: CDFI Fund, NMTC Public Data Release: 2003-2015 Data File [https://www.cdfifund.gov/news-events/news/Pages/news-detail.aspx?NewsID=270&Category=Press%20Releases]
+
+# check is csv exists in data folder; if not, download and load
+if(!file.exists("data/FY 2017 NMTC Public Data Release_v2.xlsx")){
+# set URL of data source
+data.url <- 'https://www.cdfifund.gov/Documents/FY%202017%20NMTC%20Public%20Data%20Release_v2.xlsx'
+# set file path
+data.file <- 'data/FY 2017 NMTC Public Data Release_v2.xlsx'
+# download data to local directory
+download.file(data.url,data.file, method='curl')
+}
+
+# import from excel doc
+nmtc.raw <- read_excel('data/FY 2017 NMTC Public Data Release_v2.xlsx', sheet = 3)
+
+# clean & format data
+nmtc <- nmtc.raw %>% 
+  mutate(GEOID = str_pad(`2010 Census Tract`, width=11, side="left", pad="0")) %>% 
+  mutate(metro = as.factor(`Metro/Non-Metro, 2010 Census`)) %>% 
+  mutate(cde = as.factor(`Community Development Entity (CDE) Name`)) %>% 
+  mutate(type = as.factor(`QALICB Type`)) %>% 
+  mutate(year = `Origination Year`) %>% 
+  mutate(qlici.amount = `Project QLICI Amount`) %>% 
+  mutate(total.cost = `Estimated Total Project Cost`) %>% 
+  select(GEOID, metro, cde, type, year, qlici.amount, total.cost)
+
+# summarize data from project level to census tract, create summary variables
+nmtc.tract <- nmtc %>%
+  group_by(GEOID, type) %>% 
+  mutate(one = 1) %>% 
+  summarize(one = sum(one)) %>% 
+  spread(type, one) %>% 
+  group_by(GEOID) %>% 
+  summarise_all(funs(sum))
+
+nmtc.tract <- nmtc %>% 
+  group_by(GEOID) %>% 
+  summarize(metro = first(metro), 
+            n.cde = length(unique(cde)), 
+            n.prj = n(), 
+            avg.prj.yr = n()/length(unique(year)), 
+            ttl.amt.prj = sum(qlici.amount), 
+            avg.amt.prj = mean(qlici.amount), 
+            avg.amt.yr = sum(qlici.amount)/length(unique(year))) %>%
+  merge(nmtc.tract, by="GEOID")
+
+saveRDS(nmtc.tract, "data/nmtc_tract.rds")
+
+```
+
+### 2f.Load regional characteristics (ACS variables)
+```{r 2f download + load attribute data from ACS, cache=T}
+
+# load variables (2016 5-year estimates)
+v16 <- load_variables(2016, "acs5", cache = TRUE)
+if(F){ # this can be used as a look up
+  v16 %>% select(name, label) %>% filter(grepl("19113", name))
+  v16 %>% select(name, label) %>% filter(grepl("Poverty", label))
+}
+
+## DEFINE VARIABLE SELECTION ##
+
+# Population Variables
+# TotalPopulation[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&var=B01003001]
+totpop_var <- cbind(c("B01003_001"),c("TotPop"))
+
+# Income Variables
+# BelowPoverty[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&var=B17001002]
+# MedianFamilyIncome[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&var=B19113001]
+povinc_var <- cbind(
+  c("B17001_001","B17001_002","B19113_001"),
+  c("PovPopDenominator","BelowPov","MdnFamInc")
+  )
+
+# Race/Ethnicity Variables
+# Race[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&table=B02001]
+race_var <- cbind(
+  c("B02001_002","B02001_003","B02001_004","B02001_005","B02001_006"),
+  c("White","Black","NatAm","Asian","NatIsl")
+  )
+
+# Socioeconomic Variables 
+# Education[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&table=B15003]
+# Employment[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&table=B23025]
+# Housing1[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&table=B25002]
+# Housing2[https://www.socialexplorer.com/data/ACS2016_5yr/metadata/?ds=ACS16_5yr&table=B25003]
+socioecon_var <- cbind(
+  c("B15003_001", "B15003_017", "B15003_018", "B15003_019","B15003_020", "B15003_021","B15003_022","B15003_023","B15003_024", "B15003_025", "B23025_003", "B23025_005", "B25002_001", "B25002_003", "B25003_001", "B25003_003"),
+  c("Pop25", "HS", "GED", "CollegeNoDegree0", "CollegeNoDegree1", "AssocDegree", "BachDegree", "MastDegree", "ProfDegree", "DoctDegree", "CivLabor", "Unempl", "HousingUnits", "Vacant", "OccUnits", "OccRental" )
+  )
+
+# Zip code and County level data
+# commerical development, jobs, industry, GDP??
+# urban: urban/suburban/rural/metro-region
+# health: diabetes, obesity, substance abuse, chronic
+# buit environment: parks, rec centers, health clinics, civic inst?
+# real estate: property value? (Zillow)
+
+# merge variable name vectors into dataframe
+select_vars <- rbind(totpop_var, povinc_var, race_var, socioecon_var) %>% 
+  data.frame() %>% 
+  rename(variable = X1, v = X2) %>% 
+  mutate(variable = as.character(variable))
+
+# get statelist vector 
+statelist <- stab[stab[,2]==T,1]
+
+## GET DATA ##
+
+# Get TRACT-level data
+if(!file.exists("data/ustrctsacs16_df.rds")){
+# get 2016 data
+us.trcts.acs16 <- reduce(
+  purrr::map(statelist, function(x) { # loop through statelist
+    get_acs(geography = "tract", year = 2016, variables = select_vars[,1], # get tract level data for 2016
+            state = x, geometry = F) # pull for each state, x, do not include geometry
+  }), 
+  rbind # bind tracts for each state into one data frame
+)
+# Save a sf object to a file
+saveRDS(us.trcts.acs16, "data/ustrctsacs16_df.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("us.trcts.acs16")){
+us.trcts.acs16 <- readRDS("data/ustrctsacs16_df.rds")
+}
+
+if(!file.exists("data/ustrctsacs15_df.rds")){
+# get 2015 data (2010 data is available, but returns an error)
+us.trcts.acs15 <- reduce(
+  purrr::map(statelist, function(x) {
+    get_acs(geography = "tract", year = 2015, variables = select_vars[,1], 
+            state = x, geometry = F)
+  }), 
+  rbind
+)
+# Save a sf object to a file
+saveRDS(us.trcts.acs15, "data/ustrctsacs15_df.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("us.trcts.acs15")){
+us.trcts.acs15 <- readRDS("data/ustrctsacs15_df.rds")
+}
+
+# Get COUNTY-level data
+if(!file.exists("data/uscntyacs16_df.rds")){
+# get 2016 data
+us.cnty.acs16 <- get_acs(geography = "county", year = 2016, variables = select_vars[,1],geometry = F) 
+# Save a sf object to a file
+saveRDS(us.cnty.acs16, "data/uscntyacs16_df.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("us.cnty.acs16")){
+us.cnty.acs16 <- readRDS("data/uscntyacs16_df.rds")
+}
+
+# Get STATE-level data
+if(!file.exists("data/usstacs16_df.rds")){
+# get 2016 data
+us.st.acs16 <- get_acs(geography = "state", year = 2016, variables = select_vars[,1],geometry = F) 
+# Save a sf object to a file
+saveRDS(us.st.acs16, "data/usstacs16_df.rds")
+}
+
+# check is object exists in environment; if not, reload
+if(!exists("us.st.acs16")){
+us.st.acs16 <- readRDS("data/usstacs16_df.rds")
+}
+
+## FORMAT DATA ##
+
+# transform long data to wide format
+#TRACT 2016
+us.trcts.acs16.wide <- us.trcts.acs16 %>% 
+  left_join(select_vars, by="variable") %>% # join variable names to varible codes
+  select(-c(moe,NAME,variable)) %>% # drop unnecessary vars
+  spread(key = v, value = estimate, sep = "16.") #use `spread` to generate collumns; add v16. for each variable (year 2016)
+#TRACT 2015
+us.trcts.acs15.wide <- us.trcts.acs15 %>% 
+  left_join(select_vars, by="variable") %>% 
+  select(-c(moe,NAME,variable)) %>% 
+  spread(key = v, value = estimate, sep = "15.") #add v15. for each variable (year 2015)
+#COUNTY
+us.cnty.acs16.wide <- us.cnty.acs16 %>% 
+  left_join(select_vars, by="variable") %>% # join variable names to varible codes
+  select(-c(moe,NAME,variable)) %>% # drop unnecessary vars
+  spread(key = v, value = estimate, sep = "16.") #use `spread` to generate collumns; add v16. for each variable (year 2016)
+#STATE
+us.st.acs16.wide <- us.st.acs16 %>% 
+  left_join(select_vars, by="variable") %>% # join variable names to varible codes
+  select(-c(moe,NAME,variable)) %>% # drop unnecessary vars
+  spread(key = v, value = estimate, sep = "16.") #use `spread` to generate collumns; add v16. for each variable (year 2016)
+
+#----------------------------------
+# merge (left join) 2015 to 2016 tracts
+us.trcts.acs.wide <- merge(us.trcts.acs16.wide,us.trcts.acs15.wide,by="GEOID")
+
+# calculate percent change varibles
+us.trcts.acs.chng <- us.trcts.acs.wide %>% mutate(
+  PopChng = ((v16.TotPop - v15.TotPop)/v15.TotPop),
+  PovChng = ((v16.BelowPov - v15.BelowPov)/v15.BelowPov),
+  MdnIncChng = ((v16.MdnFamInc - v15.MdnFamInc)/v15.MdnFamInc),
+  UnemplChng = (((v16.Unempl/v16.CivLabor) - (v15.Unempl/v15.CivLabor))/(v15.Unempl/v15.CivLabor)),
+  VacChng = (((v16.Vacant/v16.HousingUnits) - (v15.Vacant/v15.HousingUnits))/(v15.Vacant/v15.HousingUnits)),
+  RentChng = (((v16.OccRental/v16.OccUnits) - (v15.OccRental/v15.OccUnits))/(v15.OccRental/v15.OccUnits)),
+  GrEduChng = (((v16.MastDegree + v16.DoctDegree)/v16.Pop25) - ((v15.MastDegree + v15.DoctDegree)/v15.Pop25))/((v15.MastDegree + v15.DoctDegree)/v15.Pop25),
+  ColEduChng = ((v16.BachDegree/v16.Pop25) - (v15.BachDegree/v15.Pop25))/(v15.BachDegree/v15.Pop25),
+  RaceChng = ((v16.White/v16.Black) - (v15.White/v15.Black))/(v15.White/v15.Black)
+    ) %>% select(1,50:58)
+
+# calculate single year rate varibles
+us.trcts.acs.rt16 <- us.trcts.acs.wide %>% mutate(
+  Pop = v16.TotPop,
+  PovRt = v16.BelowPov/v16.PovPopDenominator,
+  MdnInc = v16.MdnFamInc,
+  UnemplRt = v16.Unempl/v16.CivLabor,
+  VacRt = v16.Vacant/v16.HousingUnits,
+  RentRt = v16.OccRental/v16.OccUnits,
+  GrEduRt = (v16.MastDegree + v16.DoctDegree)/v16.Pop25,
+  ColEduRt = v16.BachDegree/v16.Pop25,
+  PctWhite = v16.White/v16.TotPop
+    ) %>% select(1,50:58)
+#----------------------------------
+
+# calculate single year rate varibles
+frmt.vars <- function(x){
+  x %>% mutate(
+    Pop = v16.TotPop,
+    PovRt = v16.BelowPov/v16.PovPopDenominator,
+    MdnInc = v16.MdnFamInc,
+    UnemplRt = v16.Unempl/v16.CivLabor,
+    VacRt = v16.Vacant/v16.HousingUnits,
+    RentRt = v16.OccRental/v16.OccUnits,
+    GrEduRt = (v16.MastDegree + v16.DoctDegree)/v16.Pop25,
+    ColEduRt = v16.BachDegree/v16.Pop25,
+    PctWhite = v16.White/v16.TotPop) %>% 
+    select(1,(ncol(.)-8):ncol(.))
+}
+
+# run formating for tracts, county, state dataframes
+us.trcts.acs.rt16 <- us.trcts.acs16.wide %>% frmt.vars()
+us.cnty.acs.rt16 <- us.cnty.acs16.wide %>% frmt.vars()
+us.st.acs.rt16 <- us.st.acs16.wide %>% frmt.vars()
+
+saveRDS(us.trcts.acs.rt16,"data/us_trcts_acs_rt16.rds")
+saveRDS(us.cnty.acs.rt16,"data/us_cnty_acs_rt16.rds")
+saveRDS(us.st.acs.rt16,"data/us_st_acs_rt16.rds")
+
+```
+
+
