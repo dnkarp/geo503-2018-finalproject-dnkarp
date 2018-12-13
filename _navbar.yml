@@ -3,6 +3,8 @@ type: inverse
 left:
   - text: "Project"
     href: index.html
+  - text: "Data"
+    href: data.html
   - text: "Contact"
     href: contact.html
 right:

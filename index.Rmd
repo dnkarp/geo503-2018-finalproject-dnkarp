@@ -320,7 +320,7 @@ sfdf[sfdf$state %in% c("PA","NY","NJ"),] %>% mapview(zcol="QOZ",legend=T)
 ```
 
 Review distribution of OZ designations per county by state, include urban/non-urban classification.  Urban defined by RUCC codes 1,2,3: counties in large metro areas.
-```{r 4a4 tracts per county state summary, message=F, warning=F, cache=T, eval=T, fig.width=20}
+```{r 4a4 tracts per county state summary, message=F, warning=F, cache=T, eval=T, fig.width=50}
 
 # summarize state distribution for tracts per country
 sfdf %>% 
@@ -374,7 +374,7 @@ d <- sfdf %>%
 Use `CreateTableOne` to generate descriptive tables, compute univariate test statistics. These tables compare all variables between OZ and Non-OZ-LIC (ChiSquared tests are used for categorical variables; One-way ANOVA tests are used for continuous variables). Tables include national totals.
 
 Table 1 shows demographic (ACS) characteristics stratified by tract status
-```{r 4b2 Compare OZ and Non-OZ-LIC pt1,  message=F, warning=F, cache=T, eval=T, fig.width=20}
+```{r 4b2 Compare OZ and Non-OZ-LIC pt1,  message=F, warning=F, cache=T, eval=T, fig.width=50}
 
 # demographic mix
 tableOne1 <- CreateTableOne(strata = "OZ", vars = c("Pop","popdens","PovRt.trct","MdnInc.trct","UnemplRt","VacRt","RentRt","GrEduRt","ColEduRt","PctWhite"), data = d)
@@ -383,7 +383,7 @@ tableOne1
 ```
 
 Table 2 shows prior investment (NMTC) characteristics stratified by tract status
-```{r 4b3 Compare OZ and Non-OZ-LIC pt1, message=F, warning=F, cache=T, eval=T, fig.width=20}
+```{r 4b3 Compare OZ and Non-OZ-LIC pt1, message=F, warning=F, cache=T, eval=T, fig.width=50}
 
 # prior investment
 tableOne2 <- CreateTableOne(strata = "OZ", vars = c("metro","n.cde","n.prj","avg.prj.yr","ttl.amt.prj","avg.amt.prj","avg.amt.yr","CDE","NRE","RE","SPE"), data = d)
@@ -392,7 +392,7 @@ tableOne2
 ```
 
 Table 3 shows 'distressed area' criterion (income and poverty characteristics) stratified by tract status
-```{r 4b4 Compare OZ and Non-OZ-LIC pt1, message=F, warning=F, cache=T, eval=T, fig.width=20}
+```{r 4b4 Compare OZ and Non-OZ-LIC pt1, message=F, warning=F, cache=T, eval=T, fig.width=50}
 
 # distressed area criterion
 tableOne3 <- CreateTableOne(strata = "OZ", vars = c("PovRatio.cnty","PovRatio.st","MdnIncRatio.cnty","MdnIncRatio.st","prjdens","invdens"), data = d)
@@ -421,7 +421,7 @@ d %>% ggplot(aes(PovRt.trct, color = OZ)) +
 
 ###4c. Compare Designated and Eligible Tracts pt2
 Explore select variables, comparing distributions between designated and non-designated tracts. Use `ggboxplot` to generate plots.
-```{r 4c Compare OZ and Non-OZ-LIC pt2,  message=F, warning=F, cache=T, eval=T, fig.width=20}
+```{r 4c Compare OZ and Non-OZ-LIC pt2,  message=F, warning=F, cache=T, eval=T, fig.height=10, fig.width=10}
 
 # review distribution of variables
 # d.skim <- skim(d[23:39])
@@ -449,7 +449,7 @@ ggarrange(p1,p2,p3,p4,p5,p6 + rremove("x.text"),
 
 ##5. Map data
 Generate tract, county, and state level poverty rate maps for Alabama and Georgia. Add layer showing locations (in orange).  Using `mkmaps` function defined above. 
-```{r 5 generate maps, message=F, warning=F, cache=T, eval=T, fig.height=50}
+```{r 5 generate maps, message=F, warning=F, cache=T, eval=T, fig.height=20}
 
 # Map poverty data (functions defined above)
 tract.povrt.map <- s %>% mkmaps2('PovRt.trct',c("AL","GA"),'GEOID')
