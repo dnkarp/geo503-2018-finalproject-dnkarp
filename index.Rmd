@@ -449,7 +449,7 @@ ggarrange(p1,p2,p3,p4,p5,p6 + rremove("x.text"),
 
 ##5. Map data
 Generate tract, county, and state level poverty rate maps for Alabama and Georgia. Add layer showing locations (in orange).  Using `mkmaps` function defined above. 
-```{r 5 generate maps, message=F, warning=F, cache=T, eval=T, fig.height=10}
+```{r 5 generate maps, message=F, warning=F, cache=T, eval=T}
 
 # Map poverty data (functions defined above)
 tract.povrt.map <- s %>% mkmaps2('PovRt.trct',c("AL","GA"),'GEOID')

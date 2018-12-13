@@ -398,7 +398,6 @@ us.st.acs16.wide <- us.st.acs16 %>%
   select(-c(moe,NAME,variable)) %>% # drop unnecessary vars
   spread(key = v, value = estimate, sep = "16.") #use `spread` to generate collumns; add v16. for each variable (year 2016)
 
-#----------------------------------
 # merge (left join) 2015 to 2016 tracts
 us.trcts.acs.wide <- merge(us.trcts.acs16.wide,us.trcts.acs15.wide,by="GEOID")
 
@@ -427,7 +426,6 @@ us.trcts.acs.rt16 <- us.trcts.acs.wide %>% mutate(
   ColEduRt = v16.BachDegree/v16.Pop25,
   PctWhite = v16.White/v16.TotPop
     ) %>% select(1,50:58)
-#----------------------------------
 
 # calculate single year rate varibles
 frmt.vars <- function(x){
@@ -454,5 +452,3 @@ saveRDS(us.cnty.acs.rt16,"data/us_cnty_acs_rt16.rds")
 saveRDS(us.st.acs.rt16,"data/us_st_acs_rt16.rds")
 
 ```
-
-
