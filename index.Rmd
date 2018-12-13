@@ -16,19 +16,15 @@ link-citations: yes
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-options(width = 20)
+options(width = 50)
 
 ```
 
 #INTRODUCTION
-In 2017, the Trump Administration passed the Tax Cuts and Jobs Act [@usgov2017], authorizing the establishment of new "Opportunity Zones" (OZ) -- offering a new type of tax-incentive to target private equity investments into distressed communities. Of the 30,770 low-income community (LIC)[^LIC.note] census tracts eligible for designatoin, 8,700 were selected by state officials[^OZ.note], and approved by the US Treasury [@tres2018].  This program purports to offer an unprecedented level of opportunity for new investment aimed at community and economic development, with an estimated **$6.1 trillion** in capital elligible for this type of tax-exemption [@eig2018a]. Social impact funds, community development financial institutions, and state and local agencies across the country are now mobilizing to attract private funding, and to green-light shovel ready development projects [@article1]. However, with this new rush to reinvest and redevelopment are myriad concerns about how to manage new investment, how to prioritize community needs, and how to stave off negative effects associated with gentrification, displacement, and affordability. The Federal government has issued minimal guidance - both regarding how tracts were selected, and in terms of the types of projects that will be developed [@article2], and in the absence of and rules and regulations, many communities feel that the program may ultimately serve developers and investors, rather than the communities and people living in the OZ neighborhoods [@article3]. An initial assessment of designated tracts was conducted by the Economic Innovation Group [@eig2018b], but further analysis can provide a closer look at these communities.
+In 2017, the Trump Administration passed the Tax Cuts and Jobs Act [@usgov2017], authorizing the establishment of new "Opportunity Zones" (OZ) -- offering a new type of tax-incentive to target private equity investments into distressed communities. Of the 30,770 low-income community (LIC)[^LIC.note] census tracts eligible for designatoin, 8,700 were selected by state officials[^OZ.note], and approved by the US Treasury [@tres2018].  This program purports to offer an unprecedented level of opportunity for new investment aimed at community and economic development, with an estimated **$6.1 trillion** in capital elligible for this type of tax-exemption [@eig2018a]. Social impact funds, community development financial institutions, and state and local agencies across the country are now mobilizing to attract private funding, and to green-light shovel ready development projects [@article1]. However, with this new rush to reinvest and redevelopment are myriad concerns about how to manage new investment, how to prioritize community needs, and how to stave off negative effects associated with gentrification, displacement, and affordability. The Federal government has issued minimal guidance - both regarding how tracts were selected, and in terms of the types of projects that will be developed [@article2], and in the absence of and rules and regulations, many communities feel that the program may ultimately serve developers and investors, rather than the communities and people living in the OZ neighborhoods [@article3]. An initial assessment of designated tracts was conducted by the Economic Innovation Group [@eig2018b], but further analysis can provide a closer look at these communities, with some of that work to understand the selection process and potential already being conducted [@urban2018].
 
 [^LIC.note]:Low-Income Community(LIC): LIC census tracts have an individual poverty rate of 20% or more, AND median family income up to 80% percent of the area median (area = state or metro).[@usgov2004]
 [^OZ.note]:Opportunity Zone(OZ): Every state can designate up to 25% of its eligible census tracts. An exception permits 5% of non-LIC tracts may be eligible if contiguous with a LIC designated OZ tract (LIC-OZ), AND median family income does not exceed 125% of the median family income of the contiguous LIC-OZ tract.[@usgov2017]
-
-Qualified Opportunity Zones (QOZ) were associated with communities with higher population, poverty, unemployment, vacancy, rent, percent white, and less educated. Also, higher median income (result of 195 non-LIC contiguous QOZ, or colinearity?). Also associated with higher numbers of Community Development Entities (CDE)[^note1] and higher numbers of New Market Tax Credit (NMTC) projects, per annum.
-
-[^note1]: A CDE is a domestic corporation or partnership that is an intermediary vehicle for the provision of loans, investments, or financial counseling in low-income communities.
 
 #OVERIVEW
 The goals of this project are to:
@@ -211,15 +207,15 @@ prop.table(table(sfdf$QOZ,sfdf$TYPE)) %>% #proportions
 
 ```
 
-Table 1 shows counts by eligibilty x OZ designation.
+**Table 1** shows counts by eligibilty x OZ designation.
 ```{r 4a1 display table 1, message=F, warning=F, cache=T, eval=T, ref.label='4a1 eligibilty table 1'}
 ```
 
-Table 2 shows proportions by eligibility x OZ designation.
+**Table 2** shows proportions by eligibility x OZ designation.
 ```{r 4a1 display table 2, message=F, warning=F, cache=T, eval=T, ref.label='4a1 eligibilty table 2'}
 ```
 
-Generate a bar chart showing the distribution of designated OZ tracts, non-OZ low-income tracts, and non-eligible tracts. Sort by OZ proportion per state, and use `ggplot` to create figure.
+Generate a bar chart showing the distribution of designated OZ tracts, non-OZ low-income tracts, and non-eligible tracts. Sort by OZ proportion per state, and use `ggplot` to create **Figure 1**.
 ```{r 4a2 tract type by state bar chart, message=F, warning=F, cache=T, eval=T}
 
 # bar chart: state level distribution of tract designation/eligibility (sorted by % OZ)
@@ -279,7 +275,7 @@ x %>%
   ggplot(aes(fill = value)) +
   geom_sf(color = NA, lwd=.5) +
   labs(fill=y) +
-  ggtitle("Distribution Tracts by Eligibility") +
+  ggtitle("Poverty Rate and Designated OZone Tracts") +
   geom_sf(data = st_geometry(states.sf[states.sf$state %in% z,]), fill = "transparent", color = "white", lwd=.5) +
   geom_sf(data = st_geometry(x[(x$state %in% z) & x$OZ=="OZone",]), fill = "transparent", color = "red", lwd=.75) +
   noaxis %>%
@@ -296,7 +292,7 @@ s <- sfdf %>%
 
 ```
 
-Create map of tracts by eligibility type for continental US. (SET TO FALSE)
+Create map of tracts by eligibility type for continental US. _(DO NOT RUN, CURRENTLY SET TO FALSE)_
 ```{r 4a3 national map, message=F, warning=F, cache=T, eval=F}
 
 # create map object for enture US
@@ -304,7 +300,7 @@ s %>% st_transform(3857) %>% mkmaps('TYPE',unique(s$state),"GEOID")
 
 ```
 
-Create map of tracts by eligibility type for PA, NY and NJ.
+Create map of tracts by eligibility type for PA, NY and NJ. **Figure 2**
 ```{r 4a3 state map, message=F, warning=F, cache=T, eval=T}
 
 # create map object for enture US
@@ -319,7 +315,7 @@ sfdf[sfdf$state %in% c("PA","NY","NJ"),] %>% mapview(zcol="QOZ",legend=T)
 
 ```
 
-Review distribution of OZ designations per county by state, include urban/non-urban classification.  Urban defined by RUCC codes 1,2,3: counties in large metro areas.
+Review distribution of OZ designations per county by state, include urban/non-urban classification.  Urban defined by RUCC codes 1,2,3: counties in large metro areas. **Table 3**
 ```{r 4a4 tracts per county state summary, message=F, warning=F, cache=T, eval=T, size="tiny"}
 
 # summarize state distribution for tracts per country
@@ -334,7 +330,7 @@ sfdf %>%
 
 ```
 
-Plot percentage of OZ designations per county by state in a box plot, stratified by Urban/non-urban.
+Plot percentage of OZ designations per county by state in a box plot, stratified by Urban/non-urban. **Figure 3**
 ```{r 4a5 tracts per county state box plots, message=F, warning=F, cache=T, eval=T, fig.width=20}
 
 # create box plot of state distribution for tracts per country
@@ -373,7 +369,7 @@ d <- sfdf %>%
 
 Use `CreateTableOne` to generate descriptive tables, compute univariate test statistics. These tables compare all variables between OZ and Non-OZ-LIC (ChiSquared tests are used for categorical variables; One-way ANOVA tests are used for continuous variables). Tables include national totals.
 
-Table 1 shows demographic (ACS) characteristics stratified by tract status
+**Table 4** shows demographic (ACS) characteristics stratified by tract status
 ```{r 4b2 Compare OZ and Non-OZ-LIC pt1,  message=F, warning=F, cache=T, eval=T, size="tiny"}
 
 # demographic mix
@@ -382,7 +378,7 @@ tableOne1
 
 ```
 
-Table 2 shows prior investment (NMTC) characteristics stratified by tract status
+**Table 5** shows prior investment (NMTC) characteristics stratified by tract status
 ```{r 4b3 Compare OZ and Non-OZ-LIC pt1, message=F, warning=F, cache=T, eval=T, size="tiny"}
 
 # prior investment
@@ -391,7 +387,7 @@ tableOne2
 
 ```
 
-Table 3 shows 'distressed area' criterion (income and poverty characteristics) stratified by tract status
+**Table 6** shows 'distressed area' criterion (income and poverty characteristics) stratified by tract status
 ```{r 4b4 Compare OZ and Non-OZ-LIC pt1, message=F, warning=F, cache=T, eval=T, size="tiny"}
 
 # distressed area criterion
@@ -400,7 +396,7 @@ tableOne3
 
 ```
 
-Figure 1 shows distributions of poverty levels stratified by tract status
+**Figure 4** shows distributions of poverty levels stratified by tract status
 ```{r 4b5 Compare OZ and Non-OZ-LIC pt1, warning=F, message=F, cache=T, eval=T}
 
 # compare distribution of Poverty Rate between OZ and Non-OZ LIC
@@ -420,7 +416,7 @@ d %>% ggplot(aes(PovRt.trct, color = OZ)) +
 ```                     
 
 ###4c. Compare Designated and Eligible Tracts pt2
-Explore select variables, comparing distributions between designated and non-designated tracts. Use `ggboxplot` to generate plots.
+Explore select variables, comparing distributions between designated and non-designated tracts. Use `ggboxplot` to generate plots. **Figure 5**
 ```{r 4c Compare OZ and Non-OZ-LIC pt2,  message=F, warning=F, cache=T, eval=T}
 
 # review distribution of variables
@@ -448,7 +444,7 @@ ggarrange(p1,p2,p3,p4,p5,p6 + rremove("x.text"),
 ```                     
 
 ##5. Map data
-Generate tract, county, and state level poverty rate maps for Alabama and Georgia. Add layer showing locations (in orange).  Using `mkmaps` function defined above. 
+Generate tract, county, and state level poverty rate maps for Alabama and Georgia. Add layer showing locations (in orange).  Using `mkmaps` function defined above. **Figures 5,6,7**
 ```{r 5 generate maps, message=F, warning=F, cache=T, eval=T}
 
 # Map poverty data (functions defined above)
@@ -463,6 +459,17 @@ state.povrt.map
 ```
 
 ##6.Calculating Area Poverty
+```{r sample table, message=F, warning=F, cache=T, eval=T, results='hide'}
+data.frame(GEOID=c(1,1,1,1,2,2,2,2),neighbor=c(3,6,5,8,2,4,5,6)) %>% 
+  kable() %>%
+  kable_styling()
+
+```
+
+Define function to identify nearest neighbors. Two functions are written: `neighb.do` for serial and `neighb.dopar` for parallel processing.  To use the parallel option, `regiterDoMC` is used to sepecify the number of cores to employ. Input parameters are required to specify the dataset, number of rows to analyze, number of nearest neighbors, and maximum search distance. The functions return a `data.frame` object in a long format, e.g. 
+
+```{r show table, , message=F, warning=F, cache=T, eval=T, ref.label='sample table'}
+```
 
 ```{r 6 define neighbor average function, message=F, warning=F, cache=T, eval=T}
 
@@ -501,8 +508,8 @@ neighb.dopar <- function(dt,n,knn,dist){
 
 ```
 
-Set to FALSE
-```{r 6 compute area poverty, message=F, warning=F, cache=T, eval=F}
+Compute average area poverty using the neighbors matrix. Alabama and Georgia are run as a demonstration, search for 10 nearest neighbors, within a 5km maximum distance. The neighbor average is computed, and then a ratio for tract to neighbors is calculated.
+```{r 6 compute area poverty, message=F, warning=F, cache=T, eval=T}
 
 # subset data to Alabama and Georgia
 d <- sfdf %>% 
@@ -536,8 +543,8 @@ sfdf.ALGA <- merge(sfdf, dx, by = "GEOID", all.y = T) %>%
 
 ```
 
-Set to FALSE
-```{r 6 plot area poverty, message=F, warning=F, cache=T, eval=F}
+**Figure 8** maps the the poverty rate per tract, the _local_ area poverty rate (average of neighbors) and the poverty rate ratio between each tract and it's local neighbors.
+```{r 6 plot area poverty, message=F, warning=F, cache=T, eval=T}
 
 # plot data
 sfdf.ALGA %>% 
@@ -546,61 +553,45 @@ sfdf.ALGA %>%
 
 ```
 
-Set to FALSE
-```{r 6 test area poverty, message=F, warning=F, cache=T, eval=F}
-
-d2 <- sfdf.ALGA %>% 
-  mutate(area = set_units(st_area(.),mi^2)) %>% 
-  st_set_geometry(NULL) %>% 
-  mutate(QOZ = as.factor(QOZ)) %>%  #set QOZ as factor 
-  filter(QOZ=="DESIGNATEDQOZ" | TYPE == "LIC") %>% #restrict to LIC (low-income communities == QOZ eligible)
-  mutate(OZ = factor(OZ)) %>% 
-  mutate(popdens = as.double(Pop/area)) %>% 
-  mutate(prjdens = as.double(n.prj/area)) %>% 
-  mutate(invdens = as.double(ttl.amt.prj/area))
-
-d2 %>% ggplot(aes(pov.area.ratio, color = OZ)) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9"), 
-                       name="Census Tract\nDesignation",
-                       breaks=c("OZone","Non-OZ LIC"),
-                       labels=c("Designated OZone", "Non-OZone LIC")) +
-  geom_density(alpha = 0.4) + 
-  geom_vline(data=data.frame(d2[!is.na(d2$pov.area.ratio),] %>% 
-                               group_by(OZ) %>% 
-                               summarise(grp.mean=mean(pov.area.ratio))), 
-    aes(xintercept=grp.mean, color=OZ), 
-    linetype="dashed") +
-    xlab("2016 Area Poverty Rate Ratio") 
-
-ggboxplot(d2, x = "OZ", y = "pov.area.ratio",
-                 color = "OZ", palette = "jco")
-
-```
-
 ##7.Regression Analysis
-```{r 7 regression analysis, message=F, warning=F, cache=T, eval=F}
+Fit 2 regression models that estimate probability of eligible tracts being designated as OZones.  Input variables include area demographic characteristics and prior investments (see **section 4** above).
+```{r 7 regression analysis, message=F, warning=F, cache=T, eval=T}
 
-#outcomes... classification as QOZ
-#2-sample tests, compare LIC/QOZ
-chisq.test(table(d$OZ, d$PovRt.trct)) 
+# fit logistic regression for area demographics
+d2 <- sfdf %>% 
+  filter(OZ!="Non-LIC") 
 
-summary((glm(OZ~Pop + PovRt.trct + MdnInc.trct + UnemplRt + VacRt + RentRt + ColEduRt + GrEduRt + PctWhite, data=d, family=binomial())))
+summary((glm(OZ~Pop + PovRt.trct + MdnInc.trct + UnemplRt + VacRt + RentRt + ColEduRt + GrEduRt + PctWhite, data=d2, family=binomial())))
 
-summary((glm(OZ~n.cde + n.prj + avg.prj.yr + ttl.amt.prj + avg.amt.prj + avg.amt.yr, data=d, family=binomial())))
+# fit logistic regression for area investments
+summary((glm(OZ~n.cde + n.prj + avg.prj.yr + ttl.amt.prj + avg.amt.prj + avg.amt.yr, data=d2, family=binomial())))
 
-exp(coef(glm(OZ~PovRt.trct, data=d, family=binomial()))) #Odds ratios
+# report odds ratios for poverty rate
+exp(coef(glm(OZ~PovRt.trct, data=d2, family=binomial())))
 
 ```
 
 #SUMMARY OF FINDINGS
 
-Qualified Opportunity Zones (QOZ) were associated with communities with higher population, poverty, unemployment, vacancy, rent, percent white, and less educated. Also, higher median income (result of 195 non-LIC contiguous QOZ, or colinearity?). Also associated with higher numbers of Community Development Entities (CDE)[^CDE] and higher numbers of New Market Tax Credit (NMTC) projects, per annum.
+Of the 7,773 tracts designated as Qualified Opportunity Zones (OZ), 97% were classified as Low-Income (LIC), which represents about 10% of all tracts in the counrty. Additionally, 195 were designated based on criteria for contiguous tracts, and another 17 granted some other status for exception (see **Table 1** and **Table 2**). Note that these totals currently exclude Alaska, Arizona, Puerto Rico, and other outlying territories (adds approximately 1,000 additional designated OZ tracts). The distribution for the lower 48 states, plus Washington DC, ranges for total LIC tracts from around 25% to as high as 60% (in Mississippi), while states designated between 10 and 20% of total tracts. The proportion of eligible tracts that were designated ranges from about 25% (IA) to 75% (WY) (see **Figure 1**). The map presented in **Figure 2** allows a visual examination of the geographic distribution of selected and eligible tracts across NY, PA, and NJ. While much of the rural areas of western PA, upstate NY, and southern NJ were eligible, we can see clustering in NYC and Philadelphia areas, as well as Pittsbugh, Buffalo and various areas into the Hudson Valley and along the NY Thruway. For closer inspection, the interactive map can be used to zoom into these denser urban areas where census tracts are much smaller. 
+
+To further inspect this question of urban and rural selection, **Table 3** shows state distributions of number of OZones (median=126, range=24-879) and proportion of OZones in urban counties (median=71%, range=16-100%). **Figure 2** helps visualize these patterns with a box plot showing urban and non-urban (includes lower population towns as well as rural). This figure plots each state's distribution of the proportion of each county's tracts designated as an OZone, and stratified by urban status of the county. States are order left to right based on the median county OZone percentage (for all counties combined) -- therefore, GA had the lowest median OZ tracts per county, whereas CO had the highest.  This is interesting considering that Coloardos urban counties had a relevatively low average and maximum percentage, but not surprising given that urban areas are denser and have more tracts in total.  So, rural county OZ designations are likely to cover more territory and proportionally more of the region, while urban designations are more likely to be sparse or perhaps more concentrated neighborhods, or perhaps industrial areas. 
+
+To explore the characteristics of which areas were designated as OZones, it is useful to compare that population of tracts with those that were eligiible but not selected. presents some descriptive statistics about area demographics (**Table 4**), prior investment (**Table 5**), and area income and poverty (**Table 6**). Overall, OZones tend to be lower population density, higher poverty, lower median family income, higher unemployment, higher rate of vacancy, higher rate of renters, less educated, and less white. All but population showed statistically significant _(p<0.001)_ difference between the two groups. The investment indicators included variables related to the NMTC program.  Aggregate values were totaled from ~10 years of projects by location.  OZones tend to have greater numbers of Community Development Entities (CDE)[^CDE], more New Market Tax Credit NMTC projects[^NMTC], more projects per year, higher dollar investment, higher dollar investment per project and per year.  All of these variables were statistically signficant at _p<0.001_, except amount per project was signficant at _p<0.01_. **Figure 3** and **Figure 4** plot a selection of these variables, to aid in visualizing differences between these two populations.
+
+**Table 6** considers area income and poverty values, which are used as indicators for Low-Income Community (LIC) status. The ratio of tract-level poverty to state and county poverty, and the ratio of tract-level median family income to state and county median family income were computed.  OZone tracts had higher poverty ratios for both state and county, and lower median income for state and county.  All were statistically significant at _p<0.001_.  The average poverty rate for OZone tracts was nearly 2 times higher than the state rate, and 1.8 time higher than the county, compared with 1.6 and 1.5, for Non-OZone tracts, respectively. These ratios are explored further, by calculating a more localized, non-jurisdictional approach to area disadvantage (see **section 6**).
+
+Using Alabama and Georgia for demonstration **Figures 5-7** map the poverty rate for tract, county, and state, respectively, including a layer showing the distribution of designated OZones tracts. In both states there are concentrations of OZones in Birmingham and Atlanta, with a visible number circling the outskirts of both metro areas.  More notable, both states have a signficant spread across the southern regions where we can see county level poverty increase. 
+
+The code developed to compute neighbor averages can be tested further. For example, the number of neighbors and the optimal bandwidth can be explored with a sensitivity analysis to identify where these results overlap with county and state metrics. It is important to note that metro area rates can be obtained from the census (although those data are not considered in this analysis at this time).  However, these additional, hyperlocal, or more scale flexible definitions of area disadvantage may be more valuable in smaller towns, rural communities, and especially inter-state regions. The maps shown in **Figure 8** demonstrate an initial result of this process.
+
+Another area of this analysis to develop further is the regression modeling.  Using the area indicators presented in **section 4**, logistic regression models were fit to estimate outcome of whether an eligible tract was designated as an OZone. Similar to the results in **section 4**, probability of OZone designated was associated with increases in population, poverty, unemployment, vacancy, rent, and less education. An increase in percent white and median income were also found to improve likelihood of OZ designation, which could perhaps be a result of non-LIC exemptions (contiguous status), or some other issues in the model (colinearity?) which would require further tuning and calibration. Also associated were higher numbers of Community Development Entities and higher numbers of New Market Tax Credit (NMTC) projects, per annum.
 
 [^CDE]: A CDE is a domestic corporation or partnership that is an intermediary vehicle for the provision of loans, investments, or financial counseling in low-income communities.
+[^NMTC]: NMTC investments are made into various kinds of projects including real estate and non-real estate (other business financing).
 
 #CONCLUSION
-classify and subset OZ tracts based on upward or downward trajectory in terms of recent demographic and economic change. OZ tracts were chosen by state officials, with minimal required selection critieria. Without knowing the exact critieria used in each state, this analysis serves to deescribe the ultimate outcome of those selection processes, to present an overview of these investment-eligible communities, and to consider some of the variables relevant to evaluating the potential impact of the OZ program.
-
+This analysis provides a starting point to understanding this new policy and investment landscape as it evolves in the coming years.  OZ tracts were chosen by state officials, with minimal required selection critieria. Without knowing the exact critieria used in each state, this analysis serves to describe the ultimate outcome of those selection processes, to present an overview of these investment-eligible communities, and to consider some of the variables relevant to evaluating the potential impact of the OZ program. As development projects begin to breakground much research should be done to understand how local and regional governments mobilize to leverage this program as an economic development tool.  A question still remains whether the federal government will collect any data on these projects, as it did for the NMTC program.  The lack of project level data will pose major limitations to such analysis, making ancillary and local level data sources vital. Future work may look to classify and subset OZ tracts based on previous patterns of upward or downward trajectory in terms of recent demographic and economic change.
   
 #REFERENCES
 
